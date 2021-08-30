@@ -64,7 +64,7 @@ type embed struct {
 
 type lastembed struct {
 	Link      string `json:"link"`
-	Timestamp string `json:"timestamp"`
+	Timestamp int    `json:"timestamp"`
 }
 
 type phrase struct {
@@ -790,8 +790,9 @@ func main() {
 	compileRegexp()
 
 	api := fiber.New(fiber.Config{
+		ProxyHeader:             "X-Forwarded-For",
 		EnableTrustedProxyCheck: true,
-		TrustedProxies:          []string{"172.18.0.17", "127.0.0.1"},
+		TrustedProxies:          []string{"172.18.0.17"},
 	})
 
 	api.Use(cors.New())
