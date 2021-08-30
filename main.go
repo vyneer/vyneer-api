@@ -810,5 +810,9 @@ func main() {
 	api.Get(os.Getenv("API_PREFIX")+"/nukes", getNukes)
 	api.Get(os.Getenv("API_PREFIX")+"/mutelinks", getMutelinks)
 
-	api.Listen(":80")
+	if os.Getenv("PORT") == "" {
+		log.Fatalf("[%s] Please set the PORT environment variable and restart the server", time.Now().Format("2006-01-01 15:04:05.000000 MST"))
+	}
+
+	api.Listen(":" + os.Getenv("PORT"))
 }
