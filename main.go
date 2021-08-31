@@ -673,18 +673,20 @@ func getMutelinks(c *fiber.Ctx) error {
 				match := mutelinksRegex.FindAllStringSubmatch(theRest, -1)
 				for i := range match {
 					if len(match[i][2]) != 0 {
-						return c.JSON(&fiber.Map{
+						return c.JSON([]fiber.Map{{
 							"time":     line.Time,
 							"status":   match[i][1],
 							"duration": match[i][2],
 							"user":     line.Username,
+						},
 						})
 					} else {
-						return c.JSON(&fiber.Map{
+						return c.JSON([]fiber.Map{{
 							"time":     line.Time,
 							"status":   match[i][1],
 							"duration": "10m",
 							"user":     line.Username,
+						},
 						})
 					}
 				}
