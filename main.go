@@ -17,6 +17,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
+	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/jackc/pgtype"
 	"github.com/jackc/pgx/v4/pgxpool"
 	"github.com/joho/godotenv"
@@ -146,11 +147,10 @@ func indexOf(element time.Time, data []time.Time) int {
 			return k
 		}
 	}
-	return -1 //not found.
+	return -1
 }
 
 func getScript(c *fiber.Ctx) error {
-	log.Infof("[%s] %s %s - %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.IP(), c.Path()+"?"+string(c.Request().URI().QueryString()))
 	return c.JSON(&fiber.Map{
 		"version": scriptVersion,
 		"link":    fmt.Sprintf("https://paste.ee/r/%s", scriptPastebin),
@@ -159,10 +159,7 @@ func getScript(c *fiber.Ctx) error {
 
 func getFeatures(c *fiber.Ctx) error {
 	feats := []feature{}
-	var featsFormatted map[string]string
-	featsFormatted = make(map[string]string)
-
-	log.Infof("[%s] %s %s - %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.IP(), c.Path()+"?"+string(c.Request().URI().QueryString()))
+	var featsFormatted map[string]string = make(map[string]string)
 
 	rows, err := featdb.Query("SELECT * from dggfeat")
 	if err != nil {
@@ -191,8 +188,6 @@ func getFeatures(c *fiber.Ctx) error {
 func getYTvods(c *fiber.Ctx) error {
 	ytvods := []ytvod{}
 
-	log.Infof("[%s] %s %s - %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.IP(), c.Path()+"?"+string(c.Request().URI().QueryString()))
-
 	rows, err := ytvoddb.Query("SELECT vodid, title, starttime, endtime, thumbnail from ytvods ORDER BY datetime(starttime) DESC LIMIT 45")
 	if err != nil {
 		log.Errorf("[%s] %s %s - ytvoddb query error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
@@ -217,8 +212,6 @@ func getEmbeds(c *fiber.Ctx) error {
 	timeString := c.Query("t")
 	embeds := []embed{}
 	lastembeds := []lastembed{}
-
-	log.Infof("[%s] %s %s - %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.IP(), c.Path()+"?"+string(c.Request().URI().QueryString()))
 
 	if c.Params("last") == "" {
 		if timeString != "" {
@@ -271,36 +264,9 @@ func getEmbeds(c *fiber.Ctx) error {
 	}
 }
 
-func getLastEmbeds(c *fiber.Ctx) error {
-	embeds := []lastembed{}
-
-	log.Infof("[%s] %s %s - %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.IP(), c.Path()+"?"+string(c.Request().URI().QueryString()))
-
-	rows, err := embeddb.Query("select timest, link from embeds order by timest desc limit 5")
-	if err != nil {
-		log.Errorf("[%s] %s %s - embeddb query error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
-		return c.SendStatus(500)
-	}
-	defer rows.Close()
-
-	for rows.Next() {
-		p := lastembed{}
-		err := rows.Scan(&p.Link, &p.Timestamp)
-		if err != nil {
-			log.Errorf("[%s] %s %s - Query scan error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
-			continue
-		}
-		embeds = append(embeds, p)
-	}
-
-	return c.JSON(embeds)
-}
-
 func getPhrases(c *fiber.Ctx) error {
 	countString := c.Query("count")
 	phrases := []phrase{}
-
-	log.Infof("[%s] %s %s - %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.IP(), c.Path()+"?"+string(c.Request().URI().QueryString()))
 
 	if countString != "" {
 		count, err := strconv.Atoi(countString)
@@ -353,8 +319,6 @@ func getLWOD(c *fiber.Ctx) error {
 	twitchEntries := []lwodTwitch{}
 	youtubeEntries := []lwodYT{}
 	allEntries := []lwod{}
-
-	log.Infof("[%s] %s %s - %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.IP(), c.Path()+"?"+string(c.Request().URI().QueryString()))
 
 	if vodid != "" {
 		rows, err := lwoddb.Query("SELECT starttime, endtime, game, subject, topic from lwod WHERE vodid=$1", vodid)
@@ -420,10 +384,7 @@ func getLogs(c *fiber.Ctx) error {
 	from := c.Query("from")
 	to := c.Query("to")
 	logsRaw := []logGroup{}
-	var logs map[string][]pgtype.JSONB
-	logs = make(map[string][]pgtype.JSONB)
-
-	log.Infof("[%s] %s %s - %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.IP(), c.Path()+"?"+string(c.Request().URI().QueryString()))
+	var logs map[string][]pgtype.JSONB = make(map[string][]pgtype.JSONB)
 
 	if from != "" && to != "" {
 		rows, err := pg.Query(context.Background(), "SELECT to_char(date_trunc('second', time), $1), array_agg(json_build_object('username', username, 'features', features, 'message', message)) FROM logs WHERE time >= $2 AND time < $3 GROUP BY date_trunc('second', time) ORDER BY date_trunc('second', time)", `YYYY-MM-DD"T"HH24:MI:SSZ`, from, to)
@@ -456,8 +417,6 @@ func getRawLogs(c *fiber.Ctx) error {
 	to := c.Query("to")
 	logs := []logLineString{}
 
-	log.Infof("[%s] %s %s - %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.IP(), c.Path()+"?"+string(c.Request().URI().QueryString()))
-
 	if from != "" && to != "" {
 		rows, err := pg.Query(context.Background(), "SELECT to_char(time, 'YYYY-MM-DD\"T\"HH24:MI:SS.MSZ'), username, features, message FROM logs WHERE time >= $1 AND time < $2 ORDER BY time", from, to)
 		if err != nil {
@@ -485,8 +444,6 @@ func getNukes(c *fiber.Ctx) error {
 	countRaw := []logLine{}
 	countStamps := []time.Time{}
 	data := []nuke{}
-
-	log.Infof("[%s] %s %s - %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.IP(), c.Path()+"?"+string(c.Request().URI().QueryString()))
 
 	rows1, err := pg.Query(context.Background(), "select * from nukes where message ~* '^(!nuke|!meganuke|!aegis)' and features ~ '(moderator|admin)' and time >= NOW() - INTERVAL '5 minutes' order by time desc FETCH FIRST 10 ROWS ONLY")
 	if err != nil {
@@ -641,8 +598,6 @@ func getNukes(c *fiber.Ctx) error {
 func getMutelinks(c *fiber.Ctx) error {
 	logs := []logLine{}
 
-	log.Infof("[%s] %s %s - %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.IP(), c.Path()+"?"+string(c.Request().URI().QueryString()))
-
 	rows, err := pg.Query(context.Background(), "select * from mutelinks where message ~* '^(!mutelinks|!mutelink|!linkmute|!linksmute)' and features ~ '(moderator|admin)' order by time desc FETCH FIRST 1 ROWS ONLY")
 	if err != nil {
 		log.Errorf("[%s] %s %s - Postgres query error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
@@ -742,6 +697,9 @@ func loadDatabases() {
 	log.Infof("[%s] Connecting to databases", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
 	dbpath := filepath.Join(".", "db")
 	err := os.MkdirAll(dbpath, os.ModePerm)
+	if err != nil {
+		log.Fatalf("[%s] Error creating a db directory: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), err)
+	}
 
 	pgUrl := fmt.Sprintf("postgres://%s:%s@%s:%s/%s", pgUser, pgPass, pgHost, pgPort, pgName)
 
@@ -795,11 +753,16 @@ func main() {
 		ProxyHeader:             "X-Forwarded-For",
 		EnableTrustedProxyCheck: true,
 		TrustedProxies:          []string{"172.18.0.17"},
+		Immutable:               true,
 	})
 
 	api.Use(cors.New())
 	api.Use(limiter.New(limiter.Config{
 		Max: 60,
+	}))
+	api.Use(logger.New(logger.Config{
+		Format:     "[${time}] ${ip} - ${status} ${method} ${path}${query:} - ${latency}\n",
+		TimeFormat: "2006-01-02 15:04:05.000000 MST",
 	}))
 
 	api.Get(os.Getenv("API_PREFIX")+"/script", getScript)
