@@ -127,6 +127,10 @@ type nuke struct {
 	Victims  string    `json:"victims"`
 }
 
+type msgCount struct {
+	Count int `json:"count"`
+}
+
 func MinMax(array []time.Time) (time.Time, time.Time) {
 	var max time.Time = array[0]
 	var min time.Time = array[0]
@@ -652,6 +656,30 @@ func getMutelinks(c *fiber.Ctx) error {
 	return c.Status(404).SendString("Don't have data for mutelinks")
 }
 
+func getMsgCount(c *fiber.Ctx) error {
+	username := c.Query("u")
+	count := msgCount{}
+
+	rows, err := pg.Query(context.Background(), "select count(*) from logs where username ~* '$1' and time >= current_date::timestamp and time < current_date::timestamp + interval '1 day'", username)
+	if err != nil {
+		log.Errorf("[%s] %s %s - Postgres query error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
+		return c.SendStatus(500)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		p := msgCount{}
+		err := rows.Scan(&p.Count)
+		if err != nil {
+			log.Errorf("[%s] %s %s - Query scan error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
+			continue
+		}
+		count = p
+	}
+
+	return c.JSON(count)
+}
+
 func loadDotEnv() {
 	log.Infof("[%s] Loading environment variables", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
 	godotenv.Load()
@@ -775,6 +803,7 @@ func main() {
 	api.Get(os.Getenv("API_PREFIX")+"/rawlogs", getRawLogs)
 	api.Get(os.Getenv("API_PREFIX")+"/nukes", getNukes)
 	api.Get(os.Getenv("API_PREFIX")+"/mutelinks", getMutelinks)
+	api.Get(os.Getenv("API_PREFIX")+"/msgcount", getMsgCount)
 
 	if os.Getenv("PORT") == "" {
 		log.Fatalf("[%s] Please set the PORT environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
