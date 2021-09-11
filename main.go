@@ -660,7 +660,7 @@ func getMsgCount(c *fiber.Ctx) error {
 	username := c.Query("u")
 	count := msgCount{}
 
-	rows, err := pg.Query(context.Background(), "select count(*) from logs where username ~* '$1' and time >= current_date::timestamp and time < current_date::timestamp + interval '1 day'", username)
+	rows, err := pg.Query(context.Background(), "select count(*) from logs where username ~* $1 and time >= current_date::timestamp and time < current_date::timestamp + interval '1 day'", username)
 	if err != nil {
 		log.Errorf("[%s] %s %s - Postgres query error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
 		return c.SendStatus(500)
