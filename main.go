@@ -25,7 +25,7 @@ import (
 )
 
 var scriptVersion string
-var scriptPastebin string
+var scriptLink string
 var pgUser string
 var pgPass string
 var pgHost string
@@ -157,7 +157,7 @@ func indexOf(element time.Time, data []time.Time) int {
 func getScript(c *fiber.Ctx) error {
 	return c.JSON(&fiber.Map{
 		"version": scriptVersion,
-		"link":    fmt.Sprintf("https://paste.ee/r/%s", scriptPastebin),
+		"link":    scriptLink,
 	})
 }
 
@@ -687,9 +687,9 @@ func loadDotEnv() {
 	if scriptVersion == "" {
 		log.Fatalf("[%s] Please set the SCRIPT_VERSION environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
 	}
-	scriptPastebin = os.Getenv("SCRIPT_PASTEBIN")
-	if scriptPastebin == "" {
-		log.Fatalf("[%s] Please set the SCRIPT_PASTEBIN environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
+	scriptLink = os.Getenv("SCRIPT_LINK")
+	if scriptLink == "" {
+		log.Fatalf("[%s] Please set the SCRIPT_LINK environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
 	}
 	pgUser = os.Getenv("POSTGRES_USER")
 	if pgUser == "" {
