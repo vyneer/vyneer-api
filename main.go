@@ -76,6 +76,10 @@ type phrase struct {
 	Type     string    `json:"type"`
 }
 
+type lwodUrl struct {
+	ID string
+}
+
 type lwodTwitch struct {
 	Start   string `json:"starttime"`
 	End     string `json:"endtime"`
@@ -680,6 +684,20 @@ func getMsgCount(c *fiber.Ctx) error {
 	return c.JSON(count)
 }
 
+func getLastLWODSheet(c *fiber.Ctx) error {
+	lastLWODSheet := lwodUrl{}
+
+	row := lwoddb.QueryRow("SELECT sheetId from lwodUrl ORDER BY datetime(date) DESC LIMIT 1")
+
+	err := row.Scan(&lastLWODSheet.ID)
+	if err != nil {
+		log.Errorf("[%s] %s %s - Query scan error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path(), err)
+		return c.SendStatus(500)
+	}
+
+	return c.Redirect(fmt.Sprintf("https://docs.google.com/spreadsheets/d/%s", lastLWODSheet.ID))
+}
+
 func loadDotEnv() {
 	log.Infof("[%s] Loading environment variables", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
 	godotenv.Load()
@@ -804,6 +822,7 @@ func main() {
 	api.Get(os.Getenv("API_PREFIX")+"/nukes", getNukes)
 	api.Get(os.Getenv("API_PREFIX")+"/mutelinks", getMutelinks)
 	api.Get(os.Getenv("API_PREFIX")+"/msgcount", getMsgCount)
+	api.Get(os.Getenv("API_PREFIX")+"/lastlwod", getLastLWODSheet)
 
 	if os.Getenv("PORT") == "" {
 		log.Fatalf("[%s] Please set the PORT environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
