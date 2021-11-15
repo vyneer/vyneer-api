@@ -59,12 +59,18 @@ type ytvod struct {
 }
 
 type embed struct {
-	Link  string `json:"link"`
-	Count int    `json:"count"`
+	Link     string `json:"link"`
+	Platform string `json:"platform"`
+	Channel  string `json:"channel"`
+	Title    string `json:"title"`
+	Count    int    `json:"count"`
 }
 
 type lastembed struct {
 	Link      string `json:"link"`
+	Platform  string `json:"platform"`
+	Channel   string `json:"channel"`
+	Title     string `json:"title"`
 	Timestamp int    `json:"timestamp"`
 }
 
@@ -229,7 +235,7 @@ func getEmbeds(c *fiber.Ctx) error {
 				return c.Status(500).SendString("The time parameter is invalid")
 			}
 			if timeInt >= 5 && timeInt <= 60 {
-				rows, err := embeddb.Query("select link,count(link) as freq from embeds where timest >= strftime('%s', 'now') - $1 group by link order by freq desc limit 5", timeInt*60)
+				rows, err := embeddb.Query("select link, platform, channel, title, count(link) as freq from embeds where timest >= strftime('%s', 'now') - $1 group by link order by freq desc limit 5", timeInt*60)
 				if err != nil {
 					log.Errorf("[%s] %s %s - embeddb query error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
 					return c.SendStatus(500)
@@ -238,7 +244,7 @@ func getEmbeds(c *fiber.Ctx) error {
 
 				for rows.Next() {
 					p := embed{}
-					err := rows.Scan(&p.Link, &p.Count)
+					err := rows.Scan(&p.Link, &p.Platform, &p.Channel, &p.Title, &p.Count)
 					if err != nil {
 						log.Errorf("[%s] %s %s - Query scan error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
 						continue
@@ -253,7 +259,7 @@ func getEmbeds(c *fiber.Ctx) error {
 		}
 		return c.JSON(embeds)
 	} else {
-		rows, err := embeddb.Query("select timest, link from embeds order by timest desc limit 5")
+		rows, err := embeddb.Query("select timest, link, platform, channel, title from embeds order by timest desc limit 5")
 		if err != nil {
 			log.Errorf("[%s] %s %s - embeddb query error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
 			return c.SendStatus(500)
@@ -262,7 +268,7 @@ func getEmbeds(c *fiber.Ctx) error {
 
 		for rows.Next() {
 			p := lastembed{}
-			err := rows.Scan(&p.Timestamp, &p.Link)
+			err := rows.Scan(&p.Timestamp, &p.Link, &p.Platform, &p.Channel, &p.Title)
 			if err != nil {
 				log.Errorf("[%s] %s %s - Query scan error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
 				continue
