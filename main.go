@@ -226,7 +226,7 @@ func getEmbeds(c *fiber.Ctx) error {
 			timeInt, err := strconv.Atoi(timeString)
 			if err != nil {
 				log.Errorf("[%s] %s %s - String to int conversion error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
-				return c.Status(404).SendString("The time parameter is invalid")
+				return c.Status(500).SendString("The time parameter is invalid")
 			}
 			if timeInt >= 5 && timeInt <= 60 {
 				rows, err := embeddb.Query("select link,count(link) as freq from embeds where timest >= strftime('%s', 'now') - $1 group by link order by freq desc limit 5", timeInt*60)
@@ -245,9 +245,11 @@ func getEmbeds(c *fiber.Ctx) error {
 					}
 					embeds = append(embeds, p)
 				}
+			} else {
+				return c.Status(400).SendString("Time needs to be between 5 and 60 minutes")
 			}
 		} else {
-			return c.Status(404).SendString("The time parameter has not been provided")
+			return c.Status(400).SendString("The time parameter has not been provided")
 		}
 		return c.JSON(embeds)
 	} else {
@@ -280,7 +282,7 @@ func getPhrases(c *fiber.Ctx) error {
 		count, err := strconv.Atoi(countString)
 		if err != nil {
 			log.Errorf("[%s] %s %s - String to int conversion error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
-			return c.Status(404).SendString("The count parameter is invalid")
+			return c.Status(500).SendString("The count parameter is invalid")
 		}
 		rows, err := pg.Query(context.Background(), "select * from phrases order by time desc limit $1", count)
 		if err != nil {
