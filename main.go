@@ -403,7 +403,7 @@ func getLogs(c *fiber.Ctx) error {
 	var logs map[string][]pgtype.JSONB = make(map[string][]pgtype.JSONB)
 
 	if from != "" && to != "" {
-		rows, err := pg.Query(context.Background(), "SELECT to_char(date_trunc('second', time), $1), array_agg(json_build_object('username', username, 'features', features, 'message', message)) FROM logs WHERE time >= $2 AND time < $3 GROUP BY date_trunc('second', time) ORDER BY date_trunc('second', time)", `YYYY-MM-DD"T"HH24:MI:SSZ`, from, to)
+		rows, err := pg.Query(context.Background(), "SELECT extract(epoch from date_trunc('second', time)), array_agg(json_build_object('username', username, 'features', features, 'message', message)) FROM logs WHERE time >= $1 AND time < $2 GROUP BY date_trunc('second', time) ORDER BY date_trunc('second', time)", from, to)
 		if err != nil {
 			log.Errorf("[%s] %s %s - Postgres query error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
 			return c.SendStatus(500)
