@@ -118,7 +118,7 @@ type logLineString struct {
 }
 
 type logGroup struct {
-	Time  string
+	Time  int64
 	Lines pgtype.JSONBArray
 }
 
@@ -400,7 +400,7 @@ func getLogs(c *fiber.Ctx) error {
 	from := c.Query("from")
 	to := c.Query("to")
 	logsRaw := []logGroup{}
-	var logs map[string][]pgtype.JSONB = make(map[string][]pgtype.JSONB)
+	var logs map[int64][]pgtype.JSONB = make(map[int64][]pgtype.JSONB)
 
 	if from != "" && to != "" {
 		rows, err := pg.Query(context.Background(), "SELECT extract(epoch from date_trunc('second', time)), array_agg(json_build_object('username', username, 'features', features, 'message', message)) FROM logs WHERE time >= $1 AND time < $2 GROUP BY date_trunc('second', time) ORDER BY date_trunc('second', time)", from, to)
