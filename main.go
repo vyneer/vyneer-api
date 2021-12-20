@@ -26,6 +26,8 @@ import (
 
 var scriptVersion string
 var scriptLink string
+var devScriptVersion string
+var devScriptLink string
 var pgUser string
 var pgPass string
 var pgHost string
@@ -165,10 +167,18 @@ func indexOf(element time.Time, data []time.Time) int {
 }
 
 func getScript(c *fiber.Ctx) error {
-	return c.JSON(&fiber.Map{
-		"version": scriptVersion,
-		"link":    scriptLink,
-	})
+	if c.Params("dev") == "" {
+		return c.JSON(&fiber.Map{
+			"version": scriptVersion,
+			"link":    scriptLink,
+		})
+	} else {
+		return c.JSON(&fiber.Map{
+			"version": devScriptVersion,
+			"link":    devScriptLink,
+		})
+	}
+
 }
 
 func getFeatures(c *fiber.Ctx) error {
@@ -717,6 +727,14 @@ func loadDotEnv() {
 	if scriptLink == "" {
 		log.Fatalf("[%s] Please set the SCRIPT_LINK environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
 	}
+	devScriptVersion = os.Getenv("DEV_SCRIPT_VERSION")
+	if devScriptVersion == "" {
+		log.Fatalf("[%s] Please set the DEV_SCRIPT_VERSION environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
+	}
+	devScriptLink = os.Getenv("DEV_SCRIPT_LINK")
+	if devScriptLink == "" {
+		log.Fatalf("[%s] Please set the DEV_SCRIPT_LINK environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
+	}
 	pgUser = os.Getenv("POSTGRES_USER")
 	if pgUser == "" {
 		log.Fatalf("[%s] Please set the POSTGRES_USER environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
@@ -819,7 +837,7 @@ func main() {
 		TimeFormat: "2006-01-02 15:04:05.000000 MST",
 	}))
 
-	api.Get(os.Getenv("API_PREFIX")+"/script", getScript)
+	api.Get(os.Getenv("API_PREFIX")+"/script/:dev?", getScript)
 	api.Get(os.Getenv("API_PREFIX")+"/features", getFeatures)
 	api.Get(os.Getenv("API_PREFIX")+"/ytvods", getYTvods)
 	api.Get(os.Getenv("API_PREFIX")+"/embeds/:last?", getEmbeds)
