@@ -24,6 +24,7 @@ import (
 	_ "github.com/mattn/go-sqlite3"
 )
 
+var trustedProxyIP string
 var scriptVersion string
 var scriptLink string
 var devScriptVersion string
@@ -719,6 +720,10 @@ func getLastLWODSheet(c *fiber.Ctx) error {
 func loadDotEnv() {
 	log.Infof("[%s] Loading environment variables", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
 	godotenv.Load()
+	trustedProxyIP = os.Getenv("TRUSTED_PROXY")
+	if trustedProxyIP == "" {
+		log.Fatalf("[%s] Please set the TRUSTED_PROXY environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
+	}
 	scriptVersion = os.Getenv("SCRIPT_VERSION")
 	if scriptVersion == "" {
 		log.Fatalf("[%s] Please set the SCRIPT_VERSION environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
@@ -824,7 +829,7 @@ func main() {
 	api := fiber.New(fiber.Config{
 		ProxyHeader:             "X-Forwarded-For",
 		EnableTrustedProxyCheck: true,
-		TrustedProxies:          []string{"172.18.0.17"},
+		TrustedProxies:          []string{trustedProxyIP},
 		Immutable:               true,
 	})
 
