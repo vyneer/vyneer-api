@@ -14,6 +14,7 @@ import (
 
 	"github.com/apex/log"
 	"github.com/apex/log/handlers/text"
+	"github.com/go-redis/redis/v8"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
@@ -25,21 +26,21 @@ import (
 )
 
 var trustedProxyIP string
-var scriptVersion string
-var scriptLink string
-var devScriptVersion string
-var devScriptLink string
 var pgUser string
 var pgPass string
 var pgHost string
 var pgPort string
 var pgName string
+var redisHost string
+var redisPort string
+var redisPass string
 
 var featdb *sql.DB
 var lwoddb *sql.DB
 var ytvoddb *sql.DB
 var embeddb *sql.DB
 var pg *pgxpool.Pool
+var rdb *redis.Client
 
 var nukeRegex *regexp.Regexp
 var mutelinksRegex *regexp.Regexp
@@ -169,11 +170,31 @@ func indexOf(element time.Time, data []time.Time) int {
 
 func getScript(c *fiber.Ctx) error {
 	if c.Params("dev") == "" {
+		scriptVersion, err := rdb.Get(context.Background(), "SCRIPT_VERSION").Result()
+		if err != nil {
+			log.Errorf("[%s] %s %s - redis query error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
+			return c.SendStatus(500)
+		}
+		scriptLink, err := rdb.Get(context.Background(), "SCRIPT_LINK").Result()
+		if err != nil {
+			log.Errorf("[%s] %s %s - redis query error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
+			return c.SendStatus(500)
+		}
 		return c.JSON(&fiber.Map{
 			"version": scriptVersion,
 			"link":    scriptLink,
 		})
 	} else {
+		devScriptVersion, err := rdb.Get(context.Background(), "DEV_SCRIPT_VERSION").Result()
+		if err != nil {
+			log.Errorf("[%s] %s %s - redis query error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
+			return c.SendStatus(500)
+		}
+		devScriptLink, err := rdb.Get(context.Background(), "DEV_SCRIPT_LINK").Result()
+		if err != nil {
+			log.Errorf("[%s] %s %s - redis query error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
+			return c.SendStatus(500)
+		}
 		return c.JSON(&fiber.Map{
 			"version": devScriptVersion,
 			"link":    devScriptLink,
@@ -724,22 +745,6 @@ func loadDotEnv() {
 	if trustedProxyIP == "" {
 		log.Fatalf("[%s] Please set the TRUSTED_PROXY environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
 	}
-	scriptVersion = os.Getenv("SCRIPT_VERSION")
-	if scriptVersion == "" {
-		log.Fatalf("[%s] Please set the SCRIPT_VERSION environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
-	}
-	scriptLink = os.Getenv("SCRIPT_LINK")
-	if scriptLink == "" {
-		log.Fatalf("[%s] Please set the SCRIPT_LINK environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
-	}
-	devScriptVersion = os.Getenv("DEV_SCRIPT_VERSION")
-	if devScriptVersion == "" {
-		log.Fatalf("[%s] Please set the DEV_SCRIPT_VERSION environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
-	}
-	devScriptLink = os.Getenv("DEV_SCRIPT_LINK")
-	if devScriptLink == "" {
-		log.Fatalf("[%s] Please set the DEV_SCRIPT_LINK environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
-	}
 	pgUser = os.Getenv("POSTGRES_USER")
 	if pgUser == "" {
 		log.Fatalf("[%s] Please set the POSTGRES_USER environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
@@ -760,6 +765,15 @@ func loadDotEnv() {
 	if pgName == "" {
 		log.Fatalf("[%s] Please set the POSTGRES_DB environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
 	}
+	redisHost = os.Getenv("REDIS_HOST")
+	if redisHost == "" {
+		log.Fatalf("[%s] Please set the REDIS_HOST environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
+	}
+	redisPort = os.Getenv("REDIS_PORT")
+	if redisPort == "" {
+		log.Fatalf("[%s] Please set the REDIS_PORT environment variable and restart the server", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
+	}
+	redisPass = os.Getenv("REDIS_PASSWORD")
 
 	loc, err := time.LoadLocation("UTC")
 	if err != nil {
@@ -808,6 +822,12 @@ func loadDatabases() {
 	if err != nil {
 		log.Fatalf("[%s] Error connecting to Postgres DB: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), err)
 	}
+
+	rdb = redis.NewClient(&redis.Options{
+		Addr:     fmt.Sprintf("%s:%s", redisHost, redisPort),
+		Password: redisPass,
+		DB:       0,
+	})
 
 	log.Infof("[%s] Connected to databases successfully", time.Now().Format("2006-01-02 15:04:05.000000 MST"))
 }
