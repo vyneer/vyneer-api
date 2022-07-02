@@ -168,6 +168,19 @@ func indexOf(element time.Time, data []time.Time) int {
 	return -1
 }
 
+func indexOfUnnuke(data []string, word string) int {
+	for k, v := range data {
+		if word == v {
+			return k
+		}
+	}
+	return -1
+}
+
+func removeNukeByIndex(data []nuke, s int) []nuke {
+	return append(data[:s], data[s+1:]...)
+}
+
 func getScript(c *fiber.Ctx) error {
 	if c.Params("dev") == "" {
 		scriptVersion, err := rdb.Get(context.Background(), "SCRIPT_VERSION").Result()
@@ -493,7 +506,7 @@ func getNukes(c *fiber.Ctx) error {
 	countStamps := []time.Time{}
 	data := []nuke{}
 
-	rows1, err := pg.Query(context.Background(), "select * from nukes where message ~* '^(!nuke|!meganuke|!aegis)' and features ~ '(moderator|admin)' and time >= NOW() - INTERVAL '5 minutes' order by time desc FETCH FIRST 10 ROWS ONLY")
+	rows1, err := pg.Query(context.Background(), "select * from nukes where message ~* '^(!nuke|!meganuke|!aegis|!aegissingle|!an|!unnuke|!as)' and features ~ '(moderator|admin)' and time >= NOW() - INTERVAL '5 minutes' order by time desc FETCH FIRST 10 ROWS ONLY")
 	if err != nil {
 		log.Errorf("[%s] %s %s - Postgres query error: %s", time.Now().Format("2006-01-02 15:04:05.000000 MST"), c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
 		return c.SendStatus(500)
@@ -530,6 +543,7 @@ func getNukes(c *fiber.Ctx) error {
 		countStamps = append(countStamps, line.Time)
 	}
 
+	unnukeSlice := []string{}
 	nukeType := ""
 
 	for _, line := range logs {
@@ -540,16 +554,39 @@ func getNukes(c *fiber.Ctx) error {
 				continue
 			case 1:
 				nukeType = msgSplit[0][1:]
-				if nukeType == "aegis" {
+				switch nukeType {
+				case "aegis":
 					return c.JSON(data)
-				} else {
+				case "aegissingle", "an", "unnuke", "as":
+					if len(msgSplit) > 1 {
+						if len(msgSplit[1]) > 0 {
+							unnukeSlice = append(unnukeSlice, msgSplit[1])
+						}
+					}
+					continue
+				default:
 					continue
 				}
 			default:
 				nukeType = msgSplit[0][1:]
-				if nukeType == "aegis" {
+				switch nukeType {
+				case "aegis":
 					return c.JSON(data)
-				} else {
+				case "aegissingle", "an", "unnuke", "as":
+					if len(msgSplit) > 1 {
+						if len(msgSplit[1]) > 0 {
+							unnukeSlice = append(unnukeSlice, msgSplit[1])
+						}
+					}
+					if len(unnukeSlice) > 0 {
+						for _, element := range data {
+							index := indexOfUnnuke(unnukeSlice, element.Word)
+							if index != -1 {
+								removeNukeByIndex(data, index)
+							}
+						}
+					}
+				default:
 					nukedCount := ""
 					if len(countStamps) > 0 {
 						minTime, _ := MinMax(countStamps)
@@ -562,75 +599,85 @@ func getNukes(c *fiber.Ctx) error {
 					match := nukeRegex.FindAllStringSubmatch(theRest, -1)
 					for i := range match {
 						if len(match[i][2]) != 0 {
+							unnukeIndex := indexOfUnnuke(unnukeSlice, match[i][2])
 							if len(match[i][1]) != 0 {
-								if nukedCount != "" {
-									data = append(data, nuke{
-										Time:     line.Time,
-										Type:     nukeType,
-										Duration: match[i][1],
-										Word:     match[i][2],
-										Victims:  nukedCount,
-									})
-								} else {
-									data = append(data, nuke{
-										Time:     line.Time,
-										Type:     nukeType,
-										Duration: match[i][1],
-										Word:     match[i][2],
-									})
+								if unnukeIndex == -1 {
+									if nukedCount != "" {
+										data = append(data, nuke{
+											Time:     line.Time,
+											Type:     nukeType,
+											Duration: match[i][1],
+											Word:     match[i][2],
+											Victims:  nukedCount,
+										})
+									} else {
+										data = append(data, nuke{
+											Time:     line.Time,
+											Type:     nukeType,
+											Duration: match[i][1],
+											Word:     match[i][2],
+										})
+									}
 								}
 							} else {
-								if nukedCount != "" {
-									data = append(data, nuke{
-										Time:     line.Time,
-										Type:     nukeType,
-										Duration: "10m",
-										Word:     match[i][2],
-										Victims:  nukedCount,
-									})
-								} else {
-									data = append(data, nuke{
-										Time:     line.Time,
-										Type:     nukeType,
-										Duration: "10m",
-										Word:     match[i][2],
-									})
+								if unnukeIndex == -1 {
+									if nukedCount != "" {
+										data = append(data, nuke{
+											Time:     line.Time,
+											Type:     nukeType,
+											Duration: "10m",
+											Word:     match[i][2],
+											Victims:  nukedCount,
+										})
+									} else {
+										data = append(data, nuke{
+											Time:     line.Time,
+											Type:     nukeType,
+											Duration: "10m",
+											Word:     match[i][2],
+										})
+									}
 								}
 							}
 						} else {
+							unnukeIndex := indexOfUnnuke(unnukeSlice, match[i][3])
 							if len(match[i][1]) != 0 {
-								if nukedCount != "" {
-									data = append(data, nuke{
-										Time:     line.Time,
-										Type:     nukeType,
-										Duration: match[i][1],
-										Word:     match[i][3],
-										Victims:  nukedCount,
-									})
-								} else {
-									data = append(data, nuke{
-										Time:     line.Time,
-										Type:     nukeType,
-										Duration: match[i][1],
-										Word:     match[i][3],
-									})
+								if unnukeIndex == -1 {
+									if nukedCount != "" {
+										data = append(data, nuke{
+											Time:     line.Time,
+											Type:     nukeType,
+											Duration: match[i][1],
+											Word:     match[i][3],
+											Victims:  nukedCount,
+										})
+									} else {
+										data = append(data, nuke{
+											Time:     line.Time,
+											Type:     nukeType,
+											Duration: match[i][1],
+											Word:     match[i][3],
+										})
+									}
 								}
 							} else {
-								if nukedCount != "" {
-									data = append(data, nuke{
-										Time:     line.Time,
-										Type:     nukeType,
-										Duration: "10m",
-										Word:     match[i][3],
-										Victims:  nukedCount,
-									})
-								} else {
-									data = append(data, nuke{
-										Time:     line.Time,
-										Type:     nukeType,
-										Duration: "10m",
-										Word:     match[i][3],
-									})
+								if unnukeIndex == -1 {
+									if nukedCount != "" {
+										data = append(data, nuke{
+											Time:     line.Time,
+											Type:     nukeType,
+											Duration: "10m",
+											Word:     match[i][3],
+											Victims:  nukedCount,
+										})
+									} else {
+										data = append(data, nuke{
+											Time:     line.Time,
+											Type:     nukeType,
+											Duration: "10m",
+											Word:     match[i][3],
+										})
+									}
 								}
 							}
 						}
