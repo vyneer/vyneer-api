@@ -352,7 +352,7 @@ func getNukes(c *fiber.Ctx) error {
 		return c.SendStatus(500)
 	}
 
-	if c.Query("t") == "1" {
+	if c.Query("ts") == "1" {
 		return c.JSON(fiber.Map{
 			"updatedAt": nukeStamp,
 			"data":      data,
@@ -369,7 +369,7 @@ func getMutelinks(c *fiber.Ctx) error {
 		return c.SendStatus(500)
 	}
 	if mutelinks != nil {
-		if c.Query("t") == "1" {
+		if c.Query("ts") == "1" {
 			return c.JSON(fiber.Map{
 				"updatedAt": nukeStamp,
 				"data":      mutelinks,
