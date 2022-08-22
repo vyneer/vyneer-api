@@ -209,10 +209,17 @@ func getPhrases(c *fiber.Ctx) error {
 	}
 
 	if c.Query("ts") == "1" {
-		return c.JSON(fiber.Map{
-			"updatedAt": phraseStamp,
-			"data":      phrases,
-		})
+		if phraseStamp >= phraseRemovalStamp {
+			return c.JSON(fiber.Map{
+				"updatedAt": phraseStamp,
+				"data":      phrases,
+			})
+		} else {
+			return c.JSON(fiber.Map{
+				"updatedAt": phraseRemovalStamp,
+				"data":      phrases,
+			})
+		}
 	} else {
 		return c.JSON(phrases)
 	}
@@ -371,7 +378,7 @@ func getMutelinks(c *fiber.Ctx) error {
 	if mutelinks != nil {
 		if c.Query("ts") == "1" {
 			return c.JSON(fiber.Map{
-				"updatedAt": nukeStamp,
+				"updatedAt": mutelinksStamp,
 				"data":      mutelinks,
 			})
 		} else {
