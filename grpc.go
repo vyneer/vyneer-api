@@ -41,6 +41,10 @@ func (s *server) ReceiveNuke(ctx context.Context, in *proto.Nuke) (*proto.Empty,
 	newStamp := in.Time.AsTime().UnixMilli()
 	log.Infof("Received a gRPC nuke event, updating the nukeStamp variable: %+v -> %+v", nukeStamp, newStamp)
 	nukeStamp = newStamp
+	go func() {
+		time.Sleep(time.Minute * 5)
+		nukeStamp = time.Now().UnixMilli()
+	}()
 	return &proto.Empty{}, nil
 }
 
@@ -104,7 +108,7 @@ func doubleCheckStamps() error {
 		phraseStamp = phraseStampInnerMilli
 	}
 
-	if nukeStampInnerMilli != nukeStamp {
+	if nukeStampInnerMilli > nukeStamp {
 		log.Infof("Updating the nukeStamp variable with the proper timestamp: %+v -> %+v", nukeStamp, nukeStampInner.Time.UnixMilli())
 		nukeStamp = nukeStampInnerMilli
 	}
