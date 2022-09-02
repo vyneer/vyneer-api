@@ -272,7 +272,7 @@ func getLWOD(c *fiber.Ctx) error {
 
 		return c.JSON(youtubeEntries)
 	} else {
-		rows, err := lwoddb.Query("SELECT vodid, starttime, endtime, game, subject, topic from lwod")
+		rows, err := lwoddb.Query("SELECT vodid, vidid, starttime, endtime, game, subject, topic from lwod")
 		if err != nil {
 			log.Errorf("%s %s - lwoddb query error: %s", c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
 			return c.SendStatus(500)
@@ -281,7 +281,7 @@ func getLWOD(c *fiber.Ctx) error {
 
 		for rows.Next() {
 			p := lwod{}
-			err := rows.Scan(&p.ID, &p.Start, &p.End, &p.Game, &p.Subject, &p.Topic)
+			err := rows.Scan(&p.Twitch, &p.YouTube, &p.Start, &p.End, &p.Game, &p.Subject, &p.Topic)
 			if err != nil {
 				log.Errorf("%s %s - Query scan error: %s", c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
 				continue

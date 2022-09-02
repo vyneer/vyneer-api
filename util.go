@@ -65,12 +65,13 @@ type lwodYT struct {
 }
 
 type lwod struct {
-	ID      string `json:"id"`
-	Start   string `json:"starttime"`
-	End     string `json:"endtime"`
-	Game    string `json:"game"`
-	Subject string `json:"subject"`
-	Topic   string `json:"topic"`
+	Twitch  *string `json:"twitch"`
+	YouTube *string `json:"youtube"`
+	Start   string  `json:"starttime"`
+	End     string  `json:"endtime"`
+	Game    string  `json:"game"`
+	Subject string  `json:"subject"`
+	Topic   string  `json:"topic"`
 }
 
 type logLineString struct {
