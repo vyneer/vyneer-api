@@ -83,7 +83,7 @@ type logLineString struct {
 
 type logGroup struct {
 	Time  int64
-	Lines pgtype.JSONBArray
+	Lines pgtype.JSONArray
 }
 
 type logLine struct {
