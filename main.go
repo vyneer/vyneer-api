@@ -42,6 +42,7 @@ var pg *pgxpool.Pool
 var rdb *redis.Client
 
 var nukeRegex *regexp.Regexp
+var regexCheck *regexp.Regexp
 var mutelinksRegex *regexp.Regexp
 
 func init() {
@@ -525,6 +526,7 @@ func compileRegexp() {
 	log.Infof("Compiling regexp")
 
 	nukeRegex = regexp.MustCompile(`(\d+[HMDSWwhmds])?\s?(?:\/(.*)\/)?(.*)`)
+	regexCheck = regexp.MustCompile(`/(?:\/(.*)\/)?(.*)/`)
 	mutelinksRegex = regexp.MustCompile(`(?P<state>on|off|all)(?:(?:\s+)(?P<time>\d+[HMDSWwhmds]))?`)
 
 	log.Infof("Regexp compiled successfully")

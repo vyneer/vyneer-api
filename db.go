@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 	"strconv"
 	"strings"
 	"time"
@@ -70,7 +71,12 @@ func nukes() ([]nuke, error) {
 				case "aegissingle", "an", "unnuke", "as":
 					if len(msgSplit) > 1 {
 						if len(msgSplit[1]) > 0 {
-							unnukeSlice = append(unnukeSlice, msgSplit[1])
+							matches := regexCheck.FindStringSubmatch(msgSplit[1])
+							if len(matches) > 0 {
+								unnukeSlice = append(unnukeSlice, fmt.Sprintf("/%s/", matches[2]))
+							} else {
+								unnukeSlice = append(unnukeSlice, msgSplit[1])
+							}
 						}
 					}
 					continue
@@ -85,12 +91,23 @@ func nukes() ([]nuke, error) {
 				case "aegissingle", "an", "unnuke", "as":
 					if len(msgSplit) > 1 {
 						if len(msgSplit[1]) > 0 {
-							unnukeSlice = append(unnukeSlice, msgSplit[1])
+							matches := regexCheck.FindStringSubmatch(msgSplit[1])
+							if len(matches) > 0 {
+								unnukeSlice = append(unnukeSlice, fmt.Sprintf("/%s/", matches[2]))
+							} else {
+								unnukeSlice = append(unnukeSlice, msgSplit[1])
+							}
 						}
 					}
 					if len(unnukeSlice) > 0 {
 						for _, element := range data {
-							index := indexOfUnnuke(unnukeSlice, element.Word)
+							index := -1
+							matches := regexCheck.FindStringSubmatch(element.Word)
+							if len(matches) > 0 {
+								index = indexOfUnnuke(unnukeSlice, fmt.Sprintf("/%s/", element.Word))
+							} else {
+								index = indexOfUnnuke(unnukeSlice, element.Word)
+							}
 							if index != -1 {
 								removeNukeByIndex(data, index)
 							}
@@ -109,7 +126,8 @@ func nukes() ([]nuke, error) {
 					match := nukeRegex.FindAllStringSubmatch(theRest, -1)
 					for i := range match {
 						if len(match[i][2]) != 0 {
-							unnukeIndex := indexOfUnnuke(unnukeSlice, match[i][2])
+							regexWord := fmt.Sprintf("/%s/", match[i][2])
+							unnukeIndex := indexOfUnnuke(unnukeSlice, regexWord)
 							if len(match[i][1]) != 0 {
 								if unnukeIndex == -1 {
 									if nukedCount != "" {
@@ -117,7 +135,7 @@ func nukes() ([]nuke, error) {
 											Time:     line.Time,
 											Type:     nukeType,
 											Duration: match[i][1],
-											Word:     match[i][2],
+											Word:     regexWord,
 											Victims:  nukedCount,
 										})
 									} else {
@@ -125,7 +143,7 @@ func nukes() ([]nuke, error) {
 											Time:     line.Time,
 											Type:     nukeType,
 											Duration: match[i][1],
-											Word:     match[i][2],
+											Word:     regexWord,
 										})
 									}
 								}
@@ -136,7 +154,7 @@ func nukes() ([]nuke, error) {
 											Time:     line.Time,
 											Type:     nukeType,
 											Duration: "10m",
-											Word:     match[i][2],
+											Word:     regexWord,
 											Victims:  nukedCount,
 										})
 									} else {
@@ -144,7 +162,7 @@ func nukes() ([]nuke, error) {
 											Time:     line.Time,
 											Type:     nukeType,
 											Duration: "10m",
-											Word:     match[i][2],
+											Word:     regexWord,
 										})
 									}
 								}
