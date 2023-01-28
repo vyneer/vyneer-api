@@ -21,6 +21,15 @@ type ytvod struct {
 	Thumbnail string `json:"thumbnail"`
 }
 
+type rumblevod struct {
+	PublicID  string `json:"public_id"`
+	EmbedID   string `json:"embed_id"`
+	Title     string `json:"title"`
+	Thumbnail string `json:"thumbnail"`
+	Start     string `json:"starttime"`
+	End       string `json:"endtime"`
+}
+
 type embed struct {
 	Link     string `json:"link"`
 	Platform string `json:"platform"`
