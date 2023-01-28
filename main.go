@@ -139,7 +139,7 @@ func getYTvods(c *fiber.Ctx) error {
 func getRumbleVods(c *fiber.Ctx) error {
 	rumblevods := []rumblevod{}
 
-	rows, err := rumbledb.Query("SELECT public_id, embed_id, title, thumbnail, start_time, end_time from rumble ORDER BY datetime(start_time) DESC LIMIT 45")
+	rows, err := rumbledb.Query("SELECT public_id, embed_id, title, link, thumbnail, start_time, end_time from rumble ORDER BY datetime(start_time) DESC LIMIT 45")
 	if err != nil {
 		log.Errorf("%s %s - rumbledb query error: %s", c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
 		return c.SendStatus(500)
@@ -148,7 +148,7 @@ func getRumbleVods(c *fiber.Ctx) error {
 
 	for rows.Next() {
 		p := rumblevod{}
-		err := rows.Scan(&p.PublicID, &p.EmbedID, &p.Title, &p.Thumbnail, &p.Start, &p.End)
+		err := rows.Scan(&p.PublicID, &p.EmbedID, &p.Title, &p.Link, &p.Thumbnail, &p.Start, &p.End)
 		if err != nil {
 			log.Errorf("%s %s - Query scan error: %s", c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
 			continue

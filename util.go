@@ -25,6 +25,7 @@ type rumblevod struct {
 	PublicID  string `json:"public_id"`
 	EmbedID   string `json:"embed_id"`
 	Title     string `json:"title"`
+	Link      string `json:"link"`
 	Thumbnail string `json:"thumbnail"`
 	Start     string `json:"starttime"`
 	End       string `json:"endtime"`
