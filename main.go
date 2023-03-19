@@ -38,6 +38,7 @@ var featdb *sql.DB
 var lwoddb *sql.DB
 var ytvoddb *sql.DB
 var rumbledb *sql.DB
+var omnimirrordb *sql.DB
 var embeddb *sql.DB
 var pg *pgxpool.Pool
 var rdb *redis.Client
@@ -142,6 +143,29 @@ func getRumbleVods(c *fiber.Ctx) error {
 	rows, err := rumbledb.Query("SELECT public_id, embed_id, title, link, thumbnail, start_time, end_time from rumble ORDER BY datetime(start_time) DESC LIMIT 45")
 	if err != nil {
 		log.Errorf("%s %s - rumbledb query error: %s", c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
+		return c.SendStatus(500)
+	}
+	defer rows.Close()
+
+	for rows.Next() {
+		p := rumblevod{}
+		err := rows.Scan(&p.PublicID, &p.EmbedID, &p.Title, &p.Link, &p.Thumbnail, &p.Start, &p.End)
+		if err != nil {
+			log.Errorf("%s %s - Query scan error: %s", c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
+			continue
+		}
+		rumblevods = append(rumblevods, p)
+	}
+
+	return c.JSON(rumblevods)
+}
+
+func getOmnimirrorVods(c *fiber.Ctx) error {
+	rumblevods := []rumblevod{}
+
+	rows, err := omnimirrordb.Query("SELECT public_id, embed_id, title, link, thumbnail, start_time, end_time from rumble ORDER BY datetime(start_time) DESC LIMIT 45")
+	if err != nil {
+		log.Errorf("%s %s - omnimirrordb query error: %s", c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
 		return c.SendStatus(500)
 	}
 	defer rows.Close()
@@ -526,10 +550,16 @@ func loadDatabases() {
 		log.Fatalf("Error opening ytvoddb: %s", err)
 	}
 
-	dbpath = filepath.Join(".", "db", "omnimirror.sqlite")
+	dbpath = filepath.Join(".", "db", "rumble.sqlite")
 	rumbledb, err = sql.Open("sqlite3", dbpath)
 	if err != nil {
 		log.Fatalf("Error opening rumbledb: %s", err)
+	}
+
+	dbpath = filepath.Join(".", "db", "omnimirror.sqlite")
+	omnimirrordb, err = sql.Open("sqlite3", dbpath)
+	if err != nil {
+		log.Fatalf("Error opening omnimirrordb: %s", err)
 	}
 
 	dbpath = filepath.Join(".", "db", "embeddb.db")
@@ -587,6 +617,7 @@ func main() {
 	api.Get(os.Getenv("API_PREFIX")+"/features", getFeatures)
 	api.Get(os.Getenv("API_PREFIX")+"/ytvods", getYTvods)
 	api.Get(os.Getenv("API_PREFIX")+"/rumblevods", getRumbleVods)
+	api.Get(os.Getenv("API_PREFIX")+"/omnimirror", getOmnimirrorVods)
 	api.Get(os.Getenv("API_PREFIX")+"/embeds/:last?", getEmbeds)
 	api.Get(os.Getenv("API_PREFIX")+"/phrases", getPhrases)
 	api.Get(os.Getenv("API_PREFIX")+"/lwod", getLWOD)
