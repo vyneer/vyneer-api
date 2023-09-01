@@ -476,6 +476,36 @@ func getLastLWODSheet(c *fiber.Ctx) error {
 	return c.Redirect(fmt.Sprintf("https://docs.google.com/spreadsheets/d/%s", lastLWODSheet.ID))
 }
 
+func getProviders(c *fiber.Ctx) error {
+	embedsProvider, err := rdb.Get(context.Background(), "SCRIPT_EMBEDS_PROVIDER").Result()
+	if err != nil {
+		log.Errorf("%s %s - redis query error: %s", c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
+		return c.SendStatus(500)
+	}
+	phrasesProvider, err := rdb.Get(context.Background(), "SCRIPT_PHRASES_PROVIDER").Result()
+	if err != nil {
+		log.Errorf("%s %s - redis query error: %s", c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
+		return c.SendStatus(500)
+	}
+	nukesProvider, err := rdb.Get(context.Background(), "SCRIPT_NUKES_PROVIDER").Result()
+	if err != nil {
+		log.Errorf("%s %s - redis query error: %s", c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
+		return c.SendStatus(500)
+	}
+	linksProvider, err := rdb.Get(context.Background(), "SCRIPT_LINKS_PROVIDER").Result()
+	if err != nil {
+		log.Errorf("%s %s - redis query error: %s", c.Method(), c.Path()+"?"+string(c.Request().URI().QueryString()), err)
+		return c.SendStatus(500)
+	}
+
+	return c.JSON(&fiber.Map{
+		"embeds":  embedsProvider,
+		"phrases": phrasesProvider,
+		"nukes":   nukesProvider,
+		"links":   linksProvider,
+	})
+}
+
 func loadDotEnv() {
 	log.Infof("Loading environment variables")
 	godotenv.Load()
@@ -628,6 +658,7 @@ func main() {
 	api.Get(os.Getenv("API_PREFIX")+"/msgcount", getMsgCount)
 	api.Get(os.Getenv("API_PREFIX")+"/lastlwod", getLastLWODSheet)
 	api.Get(os.Getenv("API_PREFIX")+"/nmptimestamps", checkStamps)
+	api.Get(os.Getenv("API_PREFIX")+"/providers", getProviders)
 
 	if os.Getenv("PORT") == "" {
 		log.Fatalf("Please set the PORT environment variable and restart the server")
